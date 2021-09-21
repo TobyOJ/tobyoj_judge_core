@@ -1,4 +1,5 @@
 import yaml,os,logger,sys,shutil,subprocess
+CUR_RUN_ID=1
 CUR_PATH=os.path.abspath(os.path.dirname(__file__))
 os.chdir(CUR_PATH)
 LANGUAGE_FOLDER_PATH=os.path.join(CUR_PATH,"langs")
@@ -11,6 +12,7 @@ if(not os.path.exists(LANGUAGE_FOLDER_PATH)):
 
 # 清空运行缓存
 if(os.path.exists(EXCUTE_FOLDER_PATH)):shutil.rmtree('running')
+os.mkdir('running')
 if(not os.path.exists(PROBLEM_FOLDER_PATH)):os.mkdir('problems')
 
 langsdir=os.listdir(LANGUAGE_FOLDER_PATH)
@@ -62,11 +64,16 @@ for filename in langsdir:
             logger.log('loaded language langs/%s'%filename)
 logger.log('languages load finished: %d languages'%len(LANGUAGES))
 logger.log(LANGUAGES)
-def runLang(file,lang,folder,input_file,output_file,compare_output_file):
+def compileLang(file,lang,folder):
     lang_profile=LANGUAGES[lang]
     compile_p=subprocess.Popen(lang_profile["compile"].format(dir=folder,filename=file),shell=True)
     if(compile_p.wait()!=0):
         return {'status':"CE"}
+    return {'status':'!CE'}
+def runLang(lang,folder,input_file,output_file,compare_output_file):
+    lang_profile=LANGUAGES[lang]
+    print(folder)
+    print(lang_profile["run"].format(dir=folder,output=output_file,input=input_file))
     run_p=subprocess.Popen(lang_profile["run"].format(dir=folder,output=output_file,input=input_file),shell=True)
     if(run_p.wait()!=0):
         return {'status':"RE"}
@@ -78,7 +85,7 @@ def runLang(file,lang,folder,input_file,output_file,compare_output_file):
             return {'status':"AC"}
         else:
             return {'status':'WA'}
-def judge(problem_name,filename):
+def judge(problem_name,filename,lang,folder):
     problem_path=os.path.join(PROBLEM_FOLDER_PATH,problem_name)
     points={}
     for i in os.listdir(problem_path):
@@ -93,5 +100,30 @@ def judge(problem_name,filename):
                 points[spt[0]]={'out':i}
             else:
                 points[spt[0]]["out"]=i
-    print(points)
-judge("P1000 Hello World","")
+    logger.log(problem_name)
+    logger.log(points)
+    ret=compileLang(filename,lang,folder)
+    if(ret['status']=='CE'):
+        return 0,['CE']
+    score_list=[]
+    score=0
+    perscore=100/len(points)
+    for i in points:
+        stat=runLang(lang,folder,os.path.join(problem_path,points[i]['in']),os.path.join(problem_path,"fileoutput.out"),os.path.join(problem_path,points[i]['out']))
+        score_list.append(stat['status'])
+        if(stat['status']=='AC'):
+            score+=perscore
+    return score,score_list
+def create_run(problem):
+    global CUR_RUN_ID
+    me=CUR_RUN_ID
+    CUR_RUN_ID+=1
+    os.chdir(EXCUTE_FOLDER_PATH)
+    os.mkdir(str(me))
+    os.chdir(CUR_PATH)
+    shutil.copyfile('test.cpp',f'running/{me}/file.cpp')
+    with open(f'running/{me}/problem','w')as fp:
+        fp.write(problem)
+    score,l=judge(problem,os.path.join(EXCUTE_FOLDER_PATH,f'{me}/file.cpp'),'C++',os.path.join(EXCUTE_FOLDER_PATH,f'{me}'))
+    print(score,l)
+create_run("P1000 Hello World")

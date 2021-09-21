@@ -1,5 +1,5 @@
 language_name: C++
-compile_command_windows: cd {dir} && g++ {filename} -Wall fmax-errors=3 -o compile_res.exe
-run_command_windows: cd {dir} && compile_res.exe < {input} > {output}
-compile_command_linux:  cd {dir} && g++ {filename} -Wall fmax-errors=3 -o a.out
-run_command_linux: cd {dir} && a.out < {input} > {output}
+compile_command_windows: cd "{dir}" && g++ "{filename}" -Wall -o compile_res.exe
+run_command_windows: cd "{dir}" && "{dir}\compile_res.exe" < "{input}" > "{output}"
+compile_command_linux:  cd "{dir}" && g++ "{filename}" -Wall -o a.out
+run_command_linux: cd "{dir}" && a.out < "{input}" > "{output}"
