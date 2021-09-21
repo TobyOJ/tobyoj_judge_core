@@ -1,4 +1,4 @@
-import yaml,os,logger,sys,shutil,subprocess
+import yaml,os,logger,sys,shutil,subprocess,time
 CUR_RUN_ID=1
 CUR_PATH=os.path.abspath(os.path.dirname(__file__))
 os.chdir(CUR_PATH)
@@ -70,13 +70,19 @@ def compileLang(file,lang,folder):
     if(compile_p.wait()!=0):
         return {'status':"CE"}
     return {'status':'!CE'}
-def runLang(lang,folder,input_file,output_file,compare_output_file):
+
+def runLang(lang,folder,input_file,output_file,compare_output_file,timeout):
     lang_profile=LANGUAGES[lang]
     print(folder)
     print(lang_profile["run"].format(dir=folder,output=output_file,input=input_file))
     run_p=subprocess.Popen(lang_profile["run"].format(dir=folder,output=output_file,input=input_file),shell=True)
-    if(run_p.wait()!=0):
-        return {'status':"RE"}
+    try:
+        status_code=run_p.wait(timeout=timeout)
+        if(status_code!=0):
+            return {'status':"RE"}
+    except subprocess.TimeoutExpired:
+        run_p.kill()
+        return {'status':'TLE'}
     with open(output_file,encoding="utf-8")as fp:
         user_res=fp.read()
     with open(compare_output_file,encoding="utf-8")as fp:
@@ -88,6 +94,9 @@ def runLang(lang,folder,input_file,output_file,compare_output_file):
 def judge(problem_name,filename,lang,folder):
     problem_path=os.path.join(PROBLEM_FOLDER_PATH,problem_name)
     points={}
+    with open(os.path.join(problem_path,"config.yml"))as fp:
+        config=yaml.load(fp,Loader=yaml.FullLoader)
+    timeout=config["timeout"]
     for i in os.listdir(problem_path):
         spt=os.path.splitext(i)
         if(spt[1]==".in"):
@@ -109,11 +118,16 @@ def judge(problem_name,filename,lang,folder):
     score=0
     perscore=100/len(points)
     for i in points:
-        stat=runLang(lang,folder,os.path.join(problem_path,points[i]['in']),os.path.join(problem_path,"fileoutput.out"),os.path.join(problem_path,points[i]['out']))
+        stat=runLang(lang,folder,
+        os.path.join(problem_path,points[i]['in']),
+        os.path.join(folder,"fileoutput.out"),
+        os.path.join(problem_path,points[i]['out']),
+        timeout)
         score_list.append(stat['status'])
         if(stat['status']=='AC'):
             score+=perscore
     return score,score_list
+
 def create_run(problem):
     global CUR_RUN_ID
     me=CUR_RUN_ID
@@ -121,9 +135,11 @@ def create_run(problem):
     os.chdir(EXCUTE_FOLDER_PATH)
     os.mkdir(str(me))
     os.chdir(CUR_PATH)
-    shutil.copyfile('test.cpp',f'running/{me}/file.cpp')
+    shutil.copyfile('test.cpp',f'running/{me}/file.cpp')# test code (P1000 Hello World)
     with open(f'running/{me}/problem','w')as fp:
         fp.write(problem)
     score,l=judge(problem,os.path.join(EXCUTE_FOLDER_PATH,f'{me}/file.cpp'),'C++',os.path.join(EXCUTE_FOLDER_PATH,f'{me}'))
     print(score,l)
+    time.sleep(0.1)
+    shutil.rmtree(os.path.join(EXCUTE_FOLDER_PATH,f'{me}'))
 create_run("P1000 Hello World")
