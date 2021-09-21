@@ -66,7 +66,7 @@ logger.log('languages load finished: %d languages'%len(LANGUAGES))
 logger.log(LANGUAGES)
 def compileLang(file,lang,folder):
     lang_profile=LANGUAGES[lang]
-    compile_p=subprocess.Popen(lang_profile["compile"].format(dir=folder,filename=file),shell=True)
+    compile_p=subprocess.Popen(lang_profile["compile"].format(dir=folder,filename=file),shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if(compile_p.wait()!=0):
         return {'status':"CE"}
     return {'status':'!CE'}
