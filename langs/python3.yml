@@ -1,0 +1,5 @@
+language_name: Python3
+compile_command_windows: cd "{dir}" &&set curpyfile="{filename}"
+run_command_windows: cd "{dir}" && py -3 -u {filename} < "{input}" > "{output}"
+compile_command_linux:  cd "{dir}" &&export curpyfile="{filename}"
+run_command_linux: cd "{dir}" && python3 -u {filename} < "{input}" > "{output}"
